@@ -1,0 +1,37 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: recommendation-service
+
+  cloud:
+    nacos:
+      discovery:
+        enabled: true
+        server-addr: nacos:8848
+        namespace: cinema
+        register-enabled: true
+        group: CINEMA_GROUP
+        ephemeral: true
+        heart-beat-interval: 5000
+        heart-beat-timeout: 15000
+
+    openfeign:
+      circuitbreaker:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.zjsu.syt.cinema: DEBUG
+    com.alibaba.cloud.nacos: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always

@@ -1,0 +1,294 @@
+networks:
+  cinema-network:
+    driver: bridge
+
+volumes:
+  user-data:
+  movie-data:
+  ticket-data:
+  payment-data:
+  nacos-data:
+  nacos-logs:
+  rabbitmq-data:
+
+services:
+  nacos:
+    image: nacos/nacos-server:v2.2.3
+    container_name: nacos
+    environment:
+      - MODE=standalone
+      - JVM_XMS=256m
+      - JVM_XMX=256m
+      - JVM_XMN=128m
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    volumes:
+      - nacos-data:/home/nacos/data
+      - nacos-logs:/home/nacos/logs
+    networks:
+      - cinema-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/"]
+      interval: 20s
+      timeout: 15s
+      retries: 20
+      start_period: 90s
+    restart: unless-stopped
+
+  user-db:
+    image: mysql:8.4
+    container_name: cinema-user-db
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: cinema_user_db
+      MYSQL_USER: cinema_user
+      MYSQL_PASSWORD: cinema_pass
+    # ports:
+    #   - "3306:3306"  # 不需要暴露到宿主机，容器内部访问即可
+    volumes:
+      - user-data:/var/lib/mysql
+    networks:
+      - cinema-network
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    restart: unless-stopped
+
+  movie-db:
+    image: mysql:8.4
+    container_name: cinema-movie-db
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: cinema_movie_db
+      MYSQL_USER: cinema_user
+      MYSQL_PASSWORD: cinema_pass
+    # ports:
+    #   - "3307:3306"  # 不需要暴露到宿主机
+    volumes:
+      - movie-data:/var/lib/mysql
+    networks:
+      - cinema-network
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    restart: unless-stopped
+
+  ticket-db:
+    image: mysql:8.4
+    container_name: cinema-ticket-db
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: cinema_ticket_db
+      MYSQL_USER: cinema_user
+      MYSQL_PASSWORD: cinema_pass
+    # ports:
+    #   - "3308:3306"  # 不需要暴露到宿主机
+    volumes:
+      - ticket-data:/var/lib/mysql
+    networks:
+      - cinema-network
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    restart: unless-stopped
+
+  payment-db:
+    image: mysql:8.4
+    container_name: cinema-payment-db
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: cinema_payment_db
+      MYSQL_USER: cinema_user
+      MYSQL_PASSWORD: cinema_pass
+    # ports:
+    #   - "3309:3306"  # 不需要暴露到宿主机
+    volumes:
+      - payment-data:/var/lib/mysql
+    networks:
+      - cinema-network
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: cinema-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: cinema
+      RABBITMQ_DEFAULT_PASS: cinema123
+    ports:
+      - "5672:5672"    # AMQP端口
+      - "15672:15672"  # 管理界面
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - cinema-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    image: cinema-user-service:1.0.0
+    container_name: user-service
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://user-db:3306/cinema_user_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: cinema_user
+      SPRING_DATASOURCE_PASSWORD: cinema_pass
+      SPRING_APPLICATION_NAME: user-service
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: cinema
+      SPRING_RABBITMQ_PASSWORD: cinema123
+      SERVER_PORT: 8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      - user-db
+      - nacos
+      - rabbitmq
+    networks:
+      - cinema-network
+
+  movie-service:
+    build:
+      context: ./movie-service
+      dockerfile: Dockerfile
+    image: cinema-movie-service:1.0.0
+    container_name: movie-service
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://movie-db:3306/cinema_movie_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: cinema_user
+      SPRING_DATASOURCE_PASSWORD: cinema_pass
+      SPRING_APPLICATION_NAME: movie-service
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SERVER_PORT: 8082
+    ports:
+      - "8082:8082"
+    depends_on:
+      - movie-db
+      - nacos
+    networks:
+      - cinema-network
+
+  ticket-service:
+    build:
+      context: ./ticket-service
+      dockerfile: Dockerfile
+    image: cinema-ticket-service:1.0.0
+    container_name: ticket-service
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://ticket-db:3306/cinema_ticket_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: cinema_user
+      SPRING_DATASOURCE_PASSWORD: cinema_pass
+      SPRING_APPLICATION_NAME: ticket-service
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SERVER_PORT: 8083
+    ports:
+      - "8083:8083"
+    depends_on:
+      - ticket-db
+      - user-service
+      - movie-service
+      - nacos
+    networks:
+      - cinema-network
+
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    image: cinema-payment-service:1.0.0
+    container_name: payment-service
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://payment-db:3306/cinema_payment_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: cinema_user
+      SPRING_DATASOURCE_PASSWORD: cinema_pass
+      SPRING_APPLICATION_NAME: payment-service
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: cinema
+      SPRING_RABBITMQ_PASSWORD: cinema123
+      SERVER_PORT: 8084
+    ports:
+      - "8084:8084"
+    depends_on:
+      - payment-db
+      - ticket-service
+      - user-service
+      - nacos
+      - rabbitmq
+    networks:
+      - cinema-network
+
+  recommendation-service:
+    build:
+      context: ./recommendation-service
+      dockerfile: Dockerfile
+    image: cinema-recommendation-service:1.0.0
+    container_name: recommendation-service
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_APPLICATION_NAME: recommendation-service
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SERVER_PORT: 8085
+    ports:
+      - "8085:8085"
+    depends_on:
+      - movie-service
+      - user-service
+      - nacos
+    networks:
+      - cinema-network
+
+  gateway-service:
+    build:
+      context: ./gateway-service
+      dockerfile: Dockerfile
+    image: cinema-gateway-service:1.0.0
+    container_name: gateway-service
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_APPLICATION_NAME: gateway-service
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+      SERVER_PORT: 8090
+    ports:
+      - "8090:8090"
+    depends_on:
+      - nacos
+      - user-service
+      - movie-service
+      - ticket-service
+      - payment-service
+      - recommendation-service
+    networks:
+      - cinema-network
+
+  frontend:
+    build:
+      context: ../movie-ticket-frontend
+      dockerfile: Dockerfile
+    image: cinema-frontend:1.0.0
+    container_name: cinema-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - gateway-service
+    networks:
+      - cinema-network
+    restart: unless-stopped

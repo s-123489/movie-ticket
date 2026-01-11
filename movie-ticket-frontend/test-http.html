@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP 连接测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        h1 { color: #333; }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        ul { line-height: 1.8; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔍 HTTP 连接测试页面</h1>
+
+        <div class="status success">
+            <strong>✅ 成功!</strong> 如果你能看到这个页面，说明 HTTP 连接工作正常。
+        </div>
+
+        <div class="status info">
+            <h3>当前连接信息:</h3>
+            <ul>
+                <li><strong>协议:</strong> <code id="protocol"></code></li>
+                <li><strong>主机:</strong> <code id="host"></code></li>
+                <li><strong>端口:</strong> <code id="port"></code></li>
+                <li><strong>完整URL:</strong> <code id="fullUrl"></code></li>
+            </ul>
+        </div>
+
+        <div class="status warning" id="httpsWarning" style="display:none;">
+            <h3>⚠️ 检测到 HTTPS 重定向</h3>
+            <p>你当前正在使用 HTTPS 访问此页面。如果你想测试 HTTP，请检查以下内容：</p>
+            <ul>
+                <li>清除浏览器 HSTS 缓存</li>
+                <li>使用无痕/隐私模式</li>
+                <li>检查浏览器设置中的 "始终使用安全连接" 选项</li>
+            </ul>
+        </div>
+
+        <h3>🔧 故障排查步骤:</h3>
+        <ol>
+            <li><strong>清除 HSTS 缓存:</strong>
+                <ul>
+                    <li>Chrome: 访问 <code>chrome://net-internals/#hsts</code></li>
+                    <li>Edge: 访问 <code>edge://net-internals/#hsts</code></li>
+                    <li>在 "Delete domain security policies" 输入域名并删除</li>
+                </ul>
+            </li>
+            <li><strong>检查浏览器设置:</strong>
+                <ul>
+                    <li>Chrome: 设置 → 隐私和安全 → 安全 → 始终使用安全连接 (关闭)</li>
+                    <li>Edge: 设置 → 隐私、搜索和服务 → 自动 HTTPS (关闭)</li>
+                </ul>
+            </li>
+            <li><strong>使用无痕模式测试</strong></li>
+            <li><strong>尝试不同的浏览器</strong></li>
+        </ol>
+
+        <h3>📋 API 连接测试:</h3>
+        <button onclick="testApiConnection()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">
+            测试 API 连接
+        </button>
+        <div id="apiResult" style="margin-top: 10px;"></div>
+    </div>
+
+    <script>
+        // 显示当前连接信息
+        document.getElementById('protocol').textContent = window.location.protocol;
+        document.getElementById('host').textContent = window.location.hostname;
+        document.getElementById('port').textContent = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
+        document.getElementById('fullUrl').textContent = window.location.href;
+
+        // 检测是否使用 HTTPS
+        if (window.location.protocol === 'https:') {
+            document.getElementById('httpsWarning').style.display = 'block';
+        }
+
+        // 测试 API 连接
+        async function testApiConnection() {
+            const resultDiv = document.getElementById('apiResult');
+            resultDiv.innerHTML = '<p>正在测试...</p>';
+
+            try {
+                const apiUrl = window.location.protocol + '//' + window.location.hostname +
+                              (window.location.port ? ':' + window.location.port : '') + '/api/movies';
+
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+
+                resultDiv.innerHTML = `
+                    <div class="status success">
+                        <strong>✅ API 连接成功!</strong><br>
+                        状态码: ${response.status}<br>
+                        使用协议: ${window.location.protocol}
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="status warning">
+                        <strong>❌ API 连接失败</strong><br>
+                        错误: ${error.message}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

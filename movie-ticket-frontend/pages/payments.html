@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>支付记录 - 电影票务系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="../css/style.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="../index.html"><i class="bi bi-film"></i> 电影票务系统</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="../index.html"><i class="bi bi-house"></i> 首页</a></li>
+                    <li class="nav-item"><a class="nav-link" href="movies.html"><i class="bi bi-camera-reels"></i> 电影管理</a></li>
+                    <li class="nav-item"><a class="nav-link" href="users.html"><i class="bi bi-people"></i> 用户管理</a></li>
+                    <li class="nav-item"><a class="nav-link" href="tickets.html"><i class="bi bi-ticket-perforated"></i> 票务管理</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="payments.html"><i class="bi bi-credit-card"></i> 支付记录</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h2><i class="bi bi-credit-card"></i> 支付记录</h2>
+        <div class="table-container mt-4">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>支付ID</th>
+                        <th>用户ID</th>
+                        <th>票务ID</th>
+                        <th>金额</th>
+                        <th>支付方式</th>
+                        <th>交易号</th>
+                        <th>状态</th>
+                        <th>创建时间</th>
+                    </tr>
+                </thead>
+                <tbody id="paymentsTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', loadPayments);
+
+        async function loadPayments() {
+            try {
+                const response = await API.payments.getAll();
+                const payments = response.data || [];
+                const tbody = document.getElementById('paymentsTable');
+
+                if (payments.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">暂无支付记录</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = payments.map(payment => `
+                    <tr>
+                        <td><small>${payment.id.substring(0, 8)}...</small></td>
+                        <td><small>${payment.userId.substring(0, 8)}...</small></td>
+                        <td><small>${payment.ticketId.substring(0, 8)}...</small></td>
+                        <td><strong>${formatCurrency(payment.amount)}</strong></td>
+                        <td>${getPaymentMethodText(payment.paymentMethod)}</td>
+                        <td><small>${payment.transactionId}</small></td>
+                        <td>${getPaymentStatusBadge(payment.status)}</td>
+                        <td>${formatDateTime(payment.createdAt)}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                showError('加载失败: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

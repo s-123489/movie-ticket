@@ -1,0 +1,51 @@
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: jdbc:mysql://192.168.173.1:3306/cinema_user_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&characterEncoding=utf-8
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    open-in-view: false
+
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:cinema}
+    password: ${SPRING_RABBITMQ_PASSWORD:cinema123}
+    listener:
+      simple:
+        acknowledge-mode: auto
+        retry:
+          enabled: true
+          max-attempts: 3
+
+logging:
+  level:
+    root: INFO
+    com.zjsu.syt.cinema: DEBUG
+    org.hibernate: INFO
+    com.alibaba.cloud.nacos: INFO
+
+jwt:
+  secret: cinema-ticket-system-jwt-secret-key-for-authentication-minimum-256-bits-required
+  expiration: 86400000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always

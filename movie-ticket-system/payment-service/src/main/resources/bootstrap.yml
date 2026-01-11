@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: payment-service
+
+  cloud:
+    nacos:
+      config:
+        enabled: true
+        server-addr: ${SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR:localhost:8848}
+        namespace: cinema
+        group: CINEMA_GROUP
+        file-extension: yml
+        refresh-enabled: true
+
+      discovery:
+        enabled: true
+        server-addr: ${SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR:localhost:8848}
+        namespace: cinema
+        group: CINEMA_GROUP
